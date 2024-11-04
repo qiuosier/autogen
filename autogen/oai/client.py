@@ -396,6 +396,8 @@ class OpenAIWrapper:
     total_usage_summary: Optional[Dict[str, Any]] = None
     actual_usage_summary: Optional[Dict[str, Any]] = None
 
+    custom_clients: List[ModelClient] = []
+
     def __init__(self, *, config_list: Optional[List[Dict[str, Any]]] = None, **base_config: Any):
         """
         Args:
@@ -506,9 +508,14 @@ class OpenAIWrapper:
             # a config for a custom client is set
             # adding placeholder until the register_model_client is called with the appropriate class
             self._clients.append(PlaceHolderClient(config))
-            logger.info(
-                f"Detected custom model client in config: {model_client_cls_name}, model client can not be used until register_model_client is called."
-            )
+            custom_clients = {client_cls.__name__: client_cls for client_cls in self.custom_clients}
+            if model_client_cls_name in custom_clients:
+                self.register_model_client(custom_clients[model_client_cls_name])
+            else:
+                logger.info(
+                    f"Detected custom model client in config: {model_client_cls_name}, "
+                    "model client can not be used until register_model_client is called."
+                )
             # TODO: logging for custom client
         else:
             if api_type is not None and api_type.startswith("azure"):
